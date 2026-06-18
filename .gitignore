@@ -1,0 +1,10 @@
+# Build output
+/bin/
+
+# Test artifacts
+*.out
+coverage.*
+
+# Local fixtures recorded during development (commit deliberate ones explicitly)
+/fixtures-smoke/
+
