@@ -30,7 +30,7 @@ import (
 
 func main() {
 	var (
-		kind    = flag.String("provider", "local", "provider kind: copilot, github-models, anthropic|claude, local|ollama, openai")
+		kind    = flag.String("provider", "local", "provider kind: copilot, github-models, anthropic|claude, gemini, local|ollama, openai")
 		model   = flag.String("model", "", "model name (required)")
 		baseURL = flag.String("base-url", "", "base URL override (local/openai endpoints)")
 		apiKey  = flag.String("api-key", "", "API key/token (falls back to provider-specific env var)")

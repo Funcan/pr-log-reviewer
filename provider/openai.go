@@ -15,6 +15,7 @@ import (
 const (
 	GitHubModelsBaseURL = "https://models.github.ai/inference"
 	OllamaBaseURL       = "http://localhost:11434/v1"
+	GeminiBaseURL       = "https://generativelanguage.googleapis.com/v1beta/openai"
 )
 
 // OpenAICompatible talks to any backend that implements the OpenAI
@@ -73,6 +74,14 @@ func NewLocal(baseURL, model string, opts ...OpenAIOption) *OpenAICompatible {
 	}
 	opts = append([]OpenAIOption{WithName("local")}, opts...)
 	return NewOpenAICompatible(baseURL, "", model, opts...)
+}
+
+// NewGemini constructs a provider backed by Google Gemini via its
+// OpenAI-compatible endpoint. apiKey is a Google AI Studio API key; model is
+// e.g. "gemini-2.0-flash".
+func NewGemini(apiKey, model string, opts ...OpenAIOption) *OpenAICompatible {
+	opts = append([]OpenAIOption{WithName("gemini")}, opts...)
+	return NewOpenAICompatible(GeminiBaseURL, apiKey, model, opts...)
 }
 
 func (o *OpenAICompatible) Name() string  { return o.name }

@@ -40,6 +40,17 @@ available models at https://github.com/marketplace/models.
 
 Model names are e.g. `claude-3-5-sonnet-latest`.
 
+### Google Gemini (`-provider gemini`)
+
+Uses Gemini's OpenAI-compatible endpoint. Get an API key from Google AI Studio
+(https://aistudio.google.com/apikey):
+
+```bash
+export GEMINI_API_KEY=...   # falls back to GOOGLE_API_KEY
+```
+
+Model names are e.g. `gemini-2.0-flash`.
+
 ### Local model (`-provider local`)
 
 Any OpenAI-compatible server (Ollama, llama.cpp, LM Studio, vLLM). No

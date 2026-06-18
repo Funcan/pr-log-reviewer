@@ -26,6 +26,7 @@ type Config struct {
 //	github-models : GITHUB_MODELS_TOKEN, then GITHUB_TOKEN
 //	copilot       : COPILOT_OAUTH_TOKEN, then the local Copilot CLI config
 //	anthropic     : ANTHROPIC_API_KEY
+//	gemini        : GEMINI_API_KEY, then GOOGLE_API_KEY
 //	openai        : OPENAI_API_KEY
 //	local         : no key required
 func Build(cfg Config) (Provider, error) {
@@ -64,6 +65,16 @@ func Build(cfg Config) (Provider, error) {
 
 	case "local", "ollama":
 		return NewLocal(cfg.BaseURL, cfg.Model), nil
+
+	case "gemini", "google":
+		key := firstNonEmpty(cfg.APIKey, os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
+		if key == "" {
+			return nil, fmt.Errorf("provider %q: missing token (set GEMINI_API_KEY)", cfg.Provider)
+		}
+		if cfg.BaseURL != "" {
+			return NewOpenAICompatible(cfg.BaseURL, key, cfg.Model, WithName("gemini")), nil
+		}
+		return NewGemini(key, cfg.Model), nil
 
 	case "openai", "openai-compatible":
 		base := firstNonEmpty(cfg.BaseURL, OpenAIBaseURL)

@@ -26,6 +26,7 @@ func TestBuild_ResolvesKinds(t *testing.T) {
 		{Config{Provider: "github-models", Model: "openai/gpt-4o"}, "github-models"},
 		{Config{Provider: "copilot", Model: "gpt-4o", APIKey: "gho_fake"}, "copilot"},
 		{Config{Provider: "claude", Model: "claude-3-5-sonnet"}, "anthropic"},
+		{Config{Provider: "gemini", Model: "gemini-2.0-flash", APIKey: "g"}, "gemini"},
 		{Config{Provider: "local", Model: "llama3"}, "local"},
 		{Config{Provider: "openai", Model: "gpt-4o", APIKey: "x"}, "openai"},
 	}
