@@ -15,6 +15,7 @@ type Reviewer struct {
 	weights     map[Category]float64
 	temperature float64
 	maxTokens   int
+	maxRetries  int
 	prompt      PromptOptions
 }
 
@@ -41,13 +42,26 @@ func WithPromptOptions(o PromptOptions) Option {
 	return func(r *Reviewer) { r.prompt = o }
 }
 
+// WithMaxRetries sets how many additional attempts are made when the model
+// returns a response that cannot be parsed into a valid review (default 1).
+// Each retry appends a corrective instruction asking for strict JSON. Provider
+// transport errors are not retried.
+func WithMaxRetries(n int) Option {
+	return func(r *Reviewer) {
+		if n >= 0 {
+			r.maxRetries = n
+		}
+	}
+}
+
 // NewReviewer constructs a Reviewer backed by p.
 func NewReviewer(p provider.Provider, opts ...Option) *Reviewer {
 	r := &Reviewer{
-		provider:  p,
-		weights:   DefaultWeights,
-		maxTokens: 1500,
-		prompt:    PromptOptions{MaxDiffBytes: DefaultMaxDiffBytes},
+		provider:   p,
+		weights:    DefaultWeights,
+		maxTokens:  1500,
+		maxRetries: 1,
+		prompt:     PromptOptions{MaxDiffBytes: DefaultMaxDiffBytes},
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -64,33 +78,58 @@ type modelOutput struct {
 }
 
 // Review reviews change and returns a structured Review whose Score is computed
-// in Go from the model's per-category scores.
+// in Go from the model's per-category scores. If the model returns a response
+// that cannot be parsed into a valid review, it retries up to maxRetries times
+// with a corrective instruction.
 func (r *Reviewer) Review(ctx context.Context, change Change) (Review, error) {
 	if strings.TrimSpace(change.Message) == "" {
 		return Review{}, fmt.Errorf("review: change has an empty message")
 	}
 
 	msgs := BuildPrompt(change, r.prompt)
-	resp, err := r.provider.Complete(ctx, provider.Request{
-		Messages:    msgs,
-		Temperature: r.temperature,
-		MaxTokens:   r.maxTokens,
-		JSON:        true,
-	})
-	if err != nil {
-		return Review{}, fmt.Errorf("review: provider call: %w", err)
+
+	var lastErr error
+	for attempt := 0; attempt <= r.maxRetries; attempt++ {
+		if attempt > 0 {
+			msgs = append(msgs, provider.Message{
+				Role: provider.RoleUser,
+				Content: "Your previous response could not be parsed. Respond again with " +
+					"ONLY a single JSON object in the exact shape described, and nothing else.",
+			})
+		}
+
+		resp, err := r.provider.Complete(ctx, provider.Request{
+			Messages:    msgs,
+			Temperature: r.temperature,
+			MaxTokens:   r.maxTokens,
+			JSON:        true,
+		})
+		if err != nil {
+			// Transport/provider errors are not retried here.
+			return Review{}, fmt.Errorf("review: provider call: %w", err)
+		}
+
+		rev, err := r.buildReview(resp.Content)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return rev, nil
 	}
 
-	out, err := parseModelOutput(resp.Content)
+	return Review{}, fmt.Errorf("review: gave up after %d attempts: %w", r.maxRetries+1, lastErr)
+}
+
+// buildReview parses, validates, and aggregates a single model response.
+func (r *Reviewer) buildReview(content string) (Review, error) {
+	out, err := parseModelOutput(content)
 	if err != nil {
 		return Review{}, err
 	}
-
 	categories, err := validateCategories(out.Categories)
 	if err != nil {
 		return Review{}, err
 	}
-
 	return Review{
 		Score:      Aggregate(categories, r.weights),
 		Categories: categories,

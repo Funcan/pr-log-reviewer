@@ -9,23 +9,36 @@ import (
 	"pr-log-reviewer/provider"
 )
 
-// fakeProvider returns a canned response (or error) and records the request.
+// fakeProvider returns canned responses (or an error) and records requests. If
+// resps is set, successive calls return successive entries (last one repeats);
+// otherwise resp is returned for every call.
 type fakeProvider struct {
 	resp    string
+	resps   []string
 	err     error
-	gotReq  provider.Request
+	calls   int
+	lastReq provider.Request
 	gotJSON bool
 }
 
 func (f *fakeProvider) Name() string  { return "fake" }
 func (f *fakeProvider) Model() string { return "fake-1" }
 func (f *fakeProvider) Complete(_ context.Context, req provider.Request) (provider.Response, error) {
-	f.gotReq = req
+	f.lastReq = req
 	f.gotJSON = req.JSON
+	f.calls++
 	if f.err != nil {
 		return provider.Response{}, f.err
 	}
-	return provider.Response{Content: f.resp, Model: "fake-1"}, nil
+	content := f.resp
+	if len(f.resps) > 0 {
+		i := f.calls - 1
+		if i >= len(f.resps) {
+			i = len(f.resps) - 1
+		}
+		content = f.resps[i]
+	}
+	return provider.Response{Content: content, Model: "fake-1"}, nil
 }
 
 const goodResponse = `{
@@ -142,11 +155,97 @@ func TestReview_NoJSON(t *testing.T) {
 	}
 }
 
+func TestReview_MalformedJSON(t *testing.T) {
+	// A response that looks like JSON (has braces) but is syntactically broken,
+	// e.g. truncated by a max-tokens limit. Must surface a decode error rather
+	// than panic or silently succeed.
+	cases := map[string]string{
+		"truncated":      `{"categories": [{"category": "faithfulness", "score": 5,`,
+		"trailing comma": `{"categories": [{"category": "clarity", "score": 3},],}`,
+		"unquoted key":   `{categories: []}`,
+		"only opening":   "```json\n{",
+	}
+	for name, resp := range cases {
+		t.Run(name, func(t *testing.T) {
+			fp := &fakeProvider{resp: resp}
+			_, err := NewReviewer(fp).Review(context.Background(), sampleChange())
+			if err == nil {
+				t.Fatalf("expected an error for malformed JSON, got nil")
+			}
+			if !strings.Contains(err.Error(), "decode model response") &&
+				!strings.Contains(err.Error(), "no JSON object") {
+				t.Errorf("expected decode/no-JSON error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestReview_EmptyResponse(t *testing.T) {
+	fp := &fakeProvider{resp: ""}
+	_, err := NewReviewer(fp).Review(context.Background(), sampleChange())
+	if err == nil || !strings.Contains(err.Error(), "no JSON object") {
+		t.Errorf("expected no-JSON error for empty response, got %v", err)
+	}
+}
+
 func TestReview_NoValidCategories(t *testing.T) {
 	fp := &fakeProvider{resp: `{"categories":[{"category":"bogus","score":3}],"summary":"x"}`}
 	_, err := NewReviewer(fp).Review(context.Background(), sampleChange())
 	if err == nil || !strings.Contains(err.Error(), "no valid categories") {
 		t.Errorf("expected no-valid-categories error, got %v", err)
+	}
+}
+
+func TestReview_RetryRecovers(t *testing.T) {
+	// First response is malformed; the retry returns valid JSON.
+	fp := &fakeProvider{resps: []string{`{"categories": [`, goodResponse}}
+	rev, err := NewReviewer(fp).Review(context.Background(), sampleChange())
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	if rev.Score == 0 {
+		t.Error("expected a valid score after retry")
+	}
+	if fp.calls != 2 {
+		t.Errorf("provider called %d times, want 2", fp.calls)
+	}
+	// The retry must include a corrective instruction.
+	last := fp.lastReq.Messages[len(fp.lastReq.Messages)-1].Content
+	if !strings.Contains(last, "could not be parsed") {
+		t.Errorf("retry request missing corrective instruction, got %q", last)
+	}
+}
+
+func TestReview_RetryExhausted(t *testing.T) {
+	fp := &fakeProvider{resp: "not json at all"}
+	_, err := NewReviewer(fp, WithMaxRetries(2)).Review(context.Background(), sampleChange())
+	if err == nil || !strings.Contains(err.Error(), "gave up after 3 attempts") {
+		t.Fatalf("expected give-up error, got %v", err)
+	}
+	if fp.calls != 3 {
+		t.Errorf("provider called %d times, want 3 (1 + 2 retries)", fp.calls)
+	}
+}
+
+func TestReview_RetryDisabled(t *testing.T) {
+	fp := &fakeProvider{resp: "not json"}
+	_, err := NewReviewer(fp, WithMaxRetries(0)).Review(context.Background(), sampleChange())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if fp.calls != 1 {
+		t.Errorf("provider called %d times, want 1 (no retry)", fp.calls)
+	}
+}
+
+func TestReview_ProviderErrorNotRetried(t *testing.T) {
+	fp := &fakeProvider{err: errors.New("boom")}
+	_, err := NewReviewer(fp, WithMaxRetries(3)).Review(context.Background(), sampleChange())
+	if err == nil || !strings.Contains(err.Error(), "provider call") {
+		t.Fatalf("expected provider error, got %v", err)
+	}
+	if fp.calls != 1 {
+		t.Errorf("provider called %d times, want 1 (transport errors not retried)", fp.calls)
 	}
 }
 

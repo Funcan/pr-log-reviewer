@@ -41,6 +41,7 @@ type options struct {
 	temperature  float64
 	maxTokens    int
 	maxDiffBytes int
+	maxRetries   int
 	conventional bool
 	// output
 	asJSON    bool
@@ -64,6 +65,7 @@ func main() {
 	flag.Float64Var(&o.temperature, "temperature", 0, "sampling temperature")
 	flag.IntVar(&o.maxTokens, "max-tokens", 1500, "max tokens for the model response")
 	flag.IntVar(&o.maxDiffBytes, "max-diff-bytes", review.DefaultMaxDiffBytes, "truncate the diff to this many bytes (0 = no limit)")
+	flag.IntVar(&o.maxRetries, "max-retries", 1, "retries when the model returns an unparseable response")
 	flag.BoolVar(&o.conventional, "conventional", false, "also require Conventional Commits formatting")
 	// output
 	flag.BoolVar(&o.asJSON, "json", false, "emit the review as JSON")
@@ -99,6 +101,7 @@ func run(o options) (int, error) {
 	reviewer := review.NewReviewer(p,
 		review.WithTemperature(o.temperature),
 		review.WithMaxTokens(o.maxTokens),
+		review.WithMaxRetries(o.maxRetries),
 		review.WithPromptOptions(review.PromptOptions{
 			MaxDiffBytes: o.maxDiffBytes,
 			Conventional: o.conventional,

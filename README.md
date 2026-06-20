@@ -48,6 +48,7 @@ plr -commit HEAD -fail-under 3
 | `-temperature <f>` | Sampling temperature (default: `0`). |
 | `-max-tokens <n>` | Max tokens for the model response (default: `1500`). |
 | `-max-diff-bytes <n>` | Truncate the diff to this many bytes (`0` = no limit). |
+| `-max-retries <n>` | Retries when the model returns an unparseable response (default: `1`). |
 | `-conventional` | Also require Conventional Commits formatting. |
 | `-json` | Emit the review as JSON. |
 | `-fail-under <n>` | Exit non-zero if the score is below `n` (`0` = never). |
