@@ -15,7 +15,7 @@ var categoryDescriptions = map[Category]string{
 	Rationale:    "Does the message explain WHY the change was made, not just what changed? Penalize messages that state only the mechanics.",
 	Clarity:      "Is the message clear, well structured, and concise? Penalize vague, rambling, or confusing wording.",
 	Conventions:  "Does the message follow good conventions: a concise imperative subject line, a blank line before the body, and wrapped body text? Penalize obvious violations.",
-	Scope:        "Is the change cohesive? Penalize when the diff mixes unrelated changes that the message does not acknowledge.",
+	Scope:        "Judge whether the message's described footprint matches the diff's ACTUAL footprint. A change touches a set of components/files/areas; the message should make that breadth clear. Penalize when the message names or implies only a subset of what the diff touches (e.g. says the change is 'in the store' or 'the user store' while the diff also edits the API handler), when it is too vague to convey the real breadth, when it overstates the footprint (claiming work the diff does not contain), or when the diff bundles unrelated changes the message does not call out. Score this low whenever a reader would misjudge how far-reaching the change is.",
 }
 
 // PromptOptions tunes prompt construction.
