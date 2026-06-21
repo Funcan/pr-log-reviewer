@@ -1,0 +1,29 @@
+kind: commit
+conventional: false
+messages:
+  - text: |
+      Return an error from Divide on division by zero
+
+      Divide previously returned +Inf (or NaN for 0/0) when called with a
+      zero divisor, silently propagating a meaningless result to callers.
+      Change the signature to (float64, error) and return an explicit error
+      so callers must handle the invalid case. Add a regression test that
+      asserts the error is returned for x/0.
+    quality: good
+
+  - text: |
+      fix divide
+    quality: bad
+    defects: [clarity, rationale, completeness]
+
+  # Mediocre but acceptable: clear subject and structure, correctly describes
+  # the validation, but the rationale is thin and it overstates the scope
+  # ("refactoring the helpers", "tidying the test suite") which the diff does
+  # not do. Scores around 3-4 rather than clearly good or bad.
+  - text: |
+      Fix divide
+
+      Update Divide to validate input and improve overall numerical
+      robustness of the calculator package, refactoring the arithmetic
+      helpers and tidying up the test suite for better coverage.
+    quality: okay

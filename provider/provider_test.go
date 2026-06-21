@@ -82,6 +82,38 @@ func TestOpenAICompatible_APIError(t *testing.T) {
 	}
 }
 
+func TestAPIError_Message(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "openai envelope with code",
+			body: `{"error":{"message":"The requested model is not supported.","code":"model_not_supported","type":"invalid_request_error"}}`,
+			want: `copilot: http 400: The requested model is not supported. (model_not_supported)`,
+		},
+		{
+			name: "envelope without code",
+			body: `{"error":{"message":"unauthorized"}}`,
+			want: `copilot: http 400: unauthorized`,
+		},
+		{
+			name: "non-json body falls back to raw",
+			body: "rate limited",
+			want: `copilot: http 400: rate limited`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &APIError{Provider: "copilot", StatusCode: 400, Body: tt.body}
+			if got := e.Error(); got != tt.want {
+				t.Errorf("Error() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestAnthropic_Complete(t *testing.T) {
 	var gotBody anthropicRequest
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,30 @@
+diff --git a/calc/calc.go b/calc/calc.go
+index 1a2b3c4..5d6e7f8 100644
+--- a/calc/calc.go
++++ b/calc/calc.go
+@@ -10,6 +10,9 @@ func Multiply(a, b float64) float64 {
+ 
+ // Divide returns a divided by b.
+-func Divide(a, b float64) float64 {
+-	return a / b
++func Divide(a, b float64) (float64, error) {
++	if b == 0 {
++		return 0, errors.New("calc: divide by zero")
++	}
++	return a / b, nil
+ }
+diff --git a/calc/calc_test.go b/calc/calc_test.go
+index 2b3c4d5..6e7f8a9 100644
+--- a/calc/calc_test.go
++++ b/calc/calc_test.go
+@@ -20,3 +20,10 @@ func TestDivide(t *testing.T) {
+ 		t.Errorf("Divide(6,3) = %v, want 2", got)
+ 	}
+ }
++
++func TestDivideByZero(t *testing.T) {
++	_, err := Divide(1, 0)
++	if err == nil {
++		t.Fatal("expected error dividing by zero")
++	}
++}

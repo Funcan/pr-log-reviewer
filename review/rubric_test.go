@@ -30,7 +30,7 @@ func TestAggregate_WeightedMean(t *testing.T) {
 				{Category: Conventions, Score: 5},
 				{Category: Scope, Score: 5},
 			},
-			// (2*1 + 1.5*5 + 1*5 + 1*5 + 0.5*5 + 1*5) / 7 = 27/7 = 3.86 -> 4
+			// (2*1 + 1.5*5 + 2.5*5 + 1*5 + 0.5*5 + 1*5) / 8.5 = 34.5/8.5 = 4.06 -> 4
 			want: 4,
 		},
 		{

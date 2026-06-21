@@ -1,0 +1,21 @@
+kind: commit
+conventional: false
+messages:
+  - text: |
+      Rename Store.GetUser to FindUser
+
+      Align the lookup method with the rest of the store API, which already
+      uses the Find* prefix for single-row reads. This is a pure rename with
+      no behaviour change; updates the API handler and the store test to the
+      new name.
+    quality: good
+
+  - text: |
+      Rename GetUser to FindUser in the store
+    quality: bad
+    defects: [completeness, scope, rationale]
+
+  - text: |
+      Refactor user store
+    quality: bad
+    defects: [clarity, completeness, scope, rationale]

@@ -1,0 +1,29 @@
+diff --git a/client/client.go b/client/client.go
+index aa11bb2..cc33dd4 100644
+--- a/client/client.go
++++ b/client/client.go
+@@ -8,15 +8,21 @@ import (
+ 	"net/http"
+ 	"time"
+ )
+ 
+ // Client talks to the upstream API.
+ type Client struct {
+ 	baseURL string
+ 	http    *http.Client
+ }
+ 
+-// New returns a Client with default settings.
+-func New(baseURL string) *Client {
+-	return &Client{baseURL: baseURL, http: &http.Client{}}
++// New returns a Client. The request timeout defaults to 30s when timeout is
++// zero; pass a positive value to override it.
++func New(baseURL string, timeout time.Duration) *Client {
++	if timeout <= 0 {
++		timeout = 30 * time.Second
++	}
++	return &Client{
++		baseURL: baseURL,
++		http:    &http.Client{Timeout: timeout},
++	}
+ }

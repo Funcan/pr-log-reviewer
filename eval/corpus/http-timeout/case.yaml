@@ -1,0 +1,28 @@
+kind: commit
+conventional: false
+messages:
+  - text: |
+      Add a configurable request timeout to the API client
+
+      The HTTP client was created with no timeout, so a hung upstream
+      connection could block a caller indefinitely. New now takes a timeout
+      argument and defaults to 30s when it is zero, bounding every request
+      while still letting callers tune it.
+    quality: good
+
+  - text: |
+      changes
+    quality: bad
+    defects: [clarity, rationale, completeness]
+
+  - text: |
+      Remove deprecated logging from the client and clean up imports
+    quality: bad
+    defects: [faithfulness]
+
+  - text: |
+      Add timeout
+
+      Add a timeout to client
+    quality: bad
+    defects: [rationale]

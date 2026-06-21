@@ -56,7 +56,10 @@ func (r *Replayer) Complete(_ context.Context, req Request) (Response, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return Response{}, fmt.Errorf("replay: no fixture for key %s (record it with a live run)", key)
+			return Response{}, fmt.Errorf(
+				"replay: no fixture for provider %q model %q in %s (key %s); "+
+					"record it first with -mode record, or use -mode live to skip fixtures",
+				r.name, r.model, r.dir, key)
 		}
 		return Response{}, fmt.Errorf("replay: read fixture: %w", err)
 	}

@@ -12,13 +12,15 @@ var AllCategories = []Category{
 	Scope,
 }
 
-// DefaultWeights weights each category when computing the aggregate score. A
-// misleading or incomplete message is worse than a style nit, so Faithfulness
-// and Completeness carry the most weight and Conventions the least.
+// DefaultWeights weights each category when computing the aggregate score.
+// Rationale — why the change was made, its tradeoffs, and alternatives
+// considered — is the most valued signal and carries the most weight. A
+// misleading or incomplete message is the next worst, so Faithfulness and
+// Completeness follow, and Conventions (a style nit) carries the least.
 var DefaultWeights = map[Category]float64{
 	Faithfulness: 2.0,
 	Completeness: 1.5,
-	Rationale:    1.0,
+	Rationale:    2.5,
 	Clarity:      1.0,
 	Conventions:  0.5,
 	Scope:        1.0,

@@ -39,6 +39,10 @@ test: ## Run all tests
 .PHONY: check
 check: fmt-check vet test ## Run format check, vet, and tests
 
+.PHONY: eval
+eval: ## Run the eval harness over the corpus using recorded fixtures (no network)
+	go run ./cmd/eval -mode replay
+
 .PHONY: clean
 clean: ## Remove build artifacts
 	rm -rf $(BIN_DIR)

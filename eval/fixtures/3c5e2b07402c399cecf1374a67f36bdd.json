@@ -1,0 +1,25 @@
+{
+  "provider": "copilot",
+  "model": "gpt-4o",
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a meticulous reviewer of commit messages and pull request descriptions. You judge the QUALITY of the message against the actual change (the diff), not the code itself.\n\nScore each of the following categories on an integer scale from 1 (poor) to 5 (excellent):\n- faithfulness: Does the message accurately describe what the diff actually does? Penalize claims that the diff does not support, or that contradict it.\n- completeness: Does the message cover all significant changes in the diff? Penalize silent omissions of notable changes.\n- rationale: Does the message explain WHY the change was made, not just what changed? Penalize messages that state only the mechanics.\n- clarity: Is the message clear, well structured, and concise? Penalize vague, rambling, or confusing wording.\n- conventions: Does the message follow good conventions: a concise imperative subject line, a blank line before the body, and wrapped body text? Penalize obvious violations.\n- scope: Is the change cohesive? Penalize when the diff mixes unrelated changes that the message does not acknowledge.\n\nThen list concrete, actionable findings. Each finding must name the category it relates to, a severity of \"info\", \"minor\", or \"major\", what is wrong, and a specific suggestion to fix it. Do not invent problems; if the message is good, return few or no findings.\n\nRespond with a single JSON object and nothing else, in exactly this shape:\n{\n  \"categories\": [\n    {\"category\": \"faithfulness\", \"score\": 1-5, \"rationale\": \"short justification\"}\n    // one entry for every category listed above\n  ],\n  \"findings\": [\n    {\"category\": \"rationale\", \"severity\": \"major\", \"message\": \"what is wrong\", \"suggestion\": \"how to fix it\"}\n  ],\n  \"summary\": \"one or two sentence overall assessment\"\n}\nUse only the category identifiers listed above. Do not include an overall score; it is computed separately."
+      },
+      {
+        "role": "user",
+        "content": "Review the following commit message against its diff.\n\n=== MESSAGE ===\nReturn an error from Divide on division by zero\n\nDivide previously returned +Inf (or NaN for 0/0) when called with a\nzero divisor, silently propagating a meaningless result to callers.\nChange the signature to (float64, error) and return an explicit error\nso callers must handle the invalid case. Add a regression test that\nasserts the error is returned for x/0.\n\n\n=== DIFF ===\ndiff --git a/calc/calc.go b/calc/calc.go\nindex 1a2b3c4..5d6e7f8 100644\n--- a/calc/calc.go\n+++ b/calc/calc.go\n@@ -10,6 +10,9 @@ func Multiply(a, b float64) float64 {\n \n // Divide returns a divided by b.\n-func Divide(a, b float64) float64 {\n-\treturn a / b\n+func Divide(a, b float64) (float64, error) {\n+\tif b == 0 {\n+\t\treturn 0, errors.New(\"calc: divide by zero\")\n+\t}\n+\treturn a / b, nil\n }\ndiff --git a/calc/calc_test.go b/calc/calc_test.go\nindex 2b3c4d5..6e7f8a9 100644\n--- a/calc/calc_test.go\n+++ b/calc/calc_test.go\n@@ -20,3 +20,10 @@ func TestDivide(t *testing.T) {\n \t\tt.Errorf(\"Divide(6,3) = %v, want 2\", got)\n \t}\n }\n+\n+func TestDivideByZero(t *testing.T) {\n+\t_, err := Divide(1, 0)\n+\tif err == nil {\n+\t\tt.Fatal(\"expected error dividing by zero\")\n+\t}\n+}\n\n"
+      }
+    ],
+    "temperature": 0,
+    "max_tokens": 1500,
+    "json": true
+  },
+  "response": {
+    "content": "{\n  \"categories\": [\n    {\"category\": \"faithfulness\", \"score\": 5, \"rationale\": \"The message accurately describes the changes made in the diff, including the updated function signature, the error handling for division by zero, and the addition of a regression test.\"},\n    {\"category\": \"completeness\", \"score\": 5, \"rationale\": \"The message covers all significant changes in the diff, including the functional change to the Divide function and the addition of a test case.\"},\n    {\"category\": \"rationale\", \"score\": 5, \"rationale\": \"The message explains why the change was made, specifically to prevent silent propagation of invalid results and enforce error handling by callers.\"},\n    {\"category\": \"clarity\", \"score\": 5, \"rationale\": \"The message is clear, well-structured, and concise, with no unnecessary or confusing wording.\"},\n    {\"category\": \"conventions\", \"score\": 5, \"rationale\": \"The message follows good conventions, with a concise imperative subject line, a blank line before the body, and properly wrapped text.\"},\n    {\"category\": \"scope\", \"score\": 5, \"rationale\": \"The change is cohesive, focusing solely on improving the Divide function and adding a corresponding test case.\"}\n  ],\n  \"findings\": [],\n  \"summary\": \"The commit message is excellent, accurately describing the changes, explaining the rationale, and adhering to conventions. No issues were found.\"\n}",
+    "model": "gpt-4o-2024-11-20",
+    "input_tokens": 814,
+    "output_tokens": 312
+  }
+}

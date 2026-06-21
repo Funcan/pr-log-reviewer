@@ -5,7 +5,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Role is the author of a message in a conversation.
@@ -60,7 +62,36 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("%s: http %d: %s", e.Provider, e.StatusCode, e.Body)
+	detail := apiErrorDetail(e.Body)
+	if detail == "" {
+		detail = strings.TrimSpace(e.Body)
+	}
+	return fmt.Sprintf("%s: http %d: %s", e.Provider, e.StatusCode, detail)
+}
+
+// apiErrorDetail extracts a human-readable message from a provider error body.
+// Both the OpenAI-compatible and Anthropic error envelopes nest the message
+// under "error": {"error": {"message": ..., "code": ...}}. It returns "" if the
+// body is not such an envelope, so callers can fall back to the raw body.
+func apiErrorDetail(body string) string {
+	var env struct {
+		Error struct {
+			Message string `json:"message"`
+			Code    string `json:"code"`
+			Type    string `json:"type"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(body), &env); err != nil {
+		return ""
+	}
+	msg := strings.TrimSpace(env.Error.Message)
+	if msg == "" {
+		return ""
+	}
+	if code := env.Error.Code; code != "" {
+		return fmt.Sprintf("%s (%s)", msg, code)
+	}
+	return msg
 }
 
 // systemPrompt returns the first system message content, if any.

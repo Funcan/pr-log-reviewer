@@ -1,0 +1,40 @@
+diff --git a/store/user.go b/store/user.go
+index 111aaa..222bbb 100644
+--- a/store/user.go
++++ b/store/user.go
+@@ -14,8 +14,8 @@ type Store struct {
+ 	db *sql.DB
+ }
+ 
+-// GetUser loads a user by id.
+-func (s *Store) GetUser(ctx context.Context, id int64) (*User, error) {
++// FindUser loads a user by id.
++func (s *Store) FindUser(ctx context.Context, id int64) (*User, error) {
+ 	row := s.db.QueryRowContext(ctx, "SELECT id, name FROM users WHERE id = ?", id)
+ 	return scanUser(row)
+ }
+diff --git a/api/handler.go b/api/handler.go
+index 333ccc..444ddd 100644
+--- a/api/handler.go
++++ b/api/handler.go
+@@ -22,7 +22,7 @@ func (h *Handler) user(w http.ResponseWriter, r *http.Request) {
+ 		http.Error(w, "bad id", http.StatusBadRequest)
+ 		return
+ 	}
+-	u, err := h.store.GetUser(r.Context(), id)
++	u, err := h.store.FindUser(r.Context(), id)
+ 	if err != nil {
+ 		http.Error(w, "not found", http.StatusNotFound)
+ 		return
+diff --git a/store/user_test.go b/store/user_test.go
+index 555eee..666fff 100644
+--- a/store/user_test.go
++++ b/store/user_test.go
+@@ -30,7 +30,7 @@ func TestGetUser(t *testing.T) {
+ 	defer cleanup()
+ 
+-	u, err := s.GetUser(ctx, 1)
++	u, err := s.FindUser(ctx, 1)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}

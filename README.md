@@ -56,6 +56,65 @@ plr -commit HEAD -fail-under 3
 The `change-extract` and `provider-test` binaries are development aids for
 inspecting the extracted change and exercising a provider, respectively.
 
+## Evaluation harness
+
+The reviewer is only useful if its scores are reliable, so quality is measured
+against a corpus of changes under `eval/corpus/`. Each case is a directory with
+a `change.patch` (one diff) and a `case.yaml` listing several candidate
+messages, each labelled `good`, `okay`, or `bad`:
+
+- `good` — a strong message (expected to score `>= 4`); lists no defects.
+- `okay` — mediocre but acceptable (expected to score in the `3-4` band); may
+  optionally note minor defects. Excluded from pairwise and recall.
+- `bad` — a poor message (expected to score `<= 2`); must tag the rubric
+  categories (`defects:`) it violates.
+
+A case must contain at least one `good` and one `bad` message.
+
+To scaffold a case from a real commit, PR, or staged change, use `corpus-add`.
+It writes `change.patch` and a `case.yaml` seeded with the real message (as an
+unlabeled `quality: TODO` candidate) plus commented stubs; you then label it and
+add good/bad alternatives:
+
+```bash
+# From a commit (writes eval/corpus/<id>/)
+go run ./cmd/corpus-add -id divide-guard -commit HEAD
+
+# From a pull request, or from staged changes
+go run ./cmd/corpus-add -id my-pr -pr 123
+go run ./cmd/corpus-add -id wip -staged -message "draft commit message"
+```
+
+The `eval` command runs the reviewer over the corpus and reports three metrics:
+
+- **Pairwise discrimination** — within each case, does every good message
+  outscore every bad one?
+- **Absolute thresholds** — do good messages score `>= 4` and bad ones `<= 2`?
+- **Defect recall** — of the tagged defects on bad messages, how many did the
+  reviewer flag (via a finding in that category or a category score `<= 2`)?
+
+It exits non-zero when any metric falls below its target (defaults: pairwise
+`0.90`, threshold `0.80`, recall `0.70`), so it works as a CI gate.
+
+```bash
+# Replay recorded fixtures — deterministic, no network (CI default)
+make eval
+go run ./cmd/eval -mode replay
+
+# Call the live provider and save fixtures for later replay
+go run ./cmd/eval -mode record -provider copilot -model gpt-4o
+
+# Call the live provider without recording
+go run ./cmd/eval -mode live -provider copilot -model gpt-4o
+
+# Inspect one case, with per-message progress and JSON output
+go run ./cmd/eval -mode replay -case divide-guard -v -json
+```
+
+Useful flags: `-corpus`, `-fixtures`, `-good-min`/`-okay-min`/`-okay-max`/`-bad-max`
+(threshold tuning), `-target-pairwise`/`-target-threshold`/`-target-recall`
+(gate tuning).
+
 ## Credentials setup
 
 Pick whichever provider you want to use and set its credentials. The provider
