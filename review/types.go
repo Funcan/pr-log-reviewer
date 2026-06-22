@@ -29,7 +29,9 @@ const (
 	// Conventions: subject length, imperative mood, body wrapping, issue refs,
 	// and (optionally) Conventional Commits formatting.
 	Conventions Category = "conventions"
-	// Scope: the change is cohesive; unrelated changes are flagged.
+	// Scope: the message's described footprint matches the diff's actual reach;
+	// understated, overstated, or vague breadth (and unflagged unrelated
+	// changes) are penalized.
 	Scope Category = "scope"
 )
 
